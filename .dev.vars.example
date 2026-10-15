@@ -1,0 +1,20 @@
+# Optional local Worker environment. Copy this file to .dev.vars.
+APP_ENV=development
+PLATFORM_DOMAIN=localhost
+CORS_ALLOWED_ORIGINS=http://localhost:5173,http://127.0.0.1:5173
+CUSTOM_DOMAIN_PROVIDER=cloudflare
+CUSTOM_DOMAIN_ENABLED=false
+CUSTOM_DOMAIN_CNAME_TARGET=
+CLOUDFLARE_ZONE_ID=
+# Billing remains disabled until a real payment adapter and prices are configured.
+PAYMENT_ENABLED=false
+PAYMENT_PROVIDER=none
+PAYMENT_CURRENCY=VND
+# Email remains disabled until a real provider adapter and credentials are configured.
+EMAIL_ENABLED=false
+EMAIL_PROVIDER=none
+EMAIL_FROM=
+EMAIL_REPLY_TO=
+REMINDER_HOURS_BEFORE=24
+SUBSCRIPTION_EXPIRATION_DAYS=7,3,1
+# Set CLOUDFLARE_API_TOKEN as an untracked local secret only when needed.

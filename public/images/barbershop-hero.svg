@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900" role="img" aria-label="Abstract barbershop interior">
+  <defs>
+    <linearGradient id="wall" x1="0" x2="1" y1="0" y2="1"><stop stop-color="#302c27"/><stop offset="1" stop-color="#0d0d0c"/></linearGradient>
+    <linearGradient id="glass" x1="0" x2="0" y1="0" y2="1"><stop stop-color="#b78c52" stop-opacity=".44"/><stop offset="1" stop-color="#171514"/></linearGradient>
+  </defs>
+  <rect width="1600" height="900" fill="url(#wall)"/><path d="M0 690h1600v210H0z" fill="#171513"/>
+  <path d="M160 140h410v500H160zM680 90h330v550H680zM1090 150h350v490h-350z" fill="url(#glass)" stroke="#c49a60" stroke-opacity=".5" stroke-width="8"/>
+  <path d="M0 650h1600M85 735h1430" stroke="#c49a60" stroke-opacity=".24" stroke-width="6"/>
+  <circle cx="300" cy="280" r="48" fill="#c49a60" opacity=".45"/><circle cx="850" cy="235" r="46" fill="#c49a60" opacity=".42"/><circle cx="1260" cy="300" r="42" fill="#c49a60" opacity=".4"/>
+</svg>

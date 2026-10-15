@@ -1,0 +1,54 @@
+{
+  "name": "barbersaas",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "engines": {
+    "node": ">=20.19.0"
+  },
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build && node scripts/remove-local-secrets-from-build.mjs",
+    "preview": "vite preview",
+    "deploy": "npm run quality && node scripts/deploy-worker.mjs",
+    "quality": "npm run typecheck && npm test && npm run build && wrangler deploy --dry-run",
+    "typecheck": "tsc -b --pretty",
+    "test": "node scripts/run-tests.mjs",
+    "test:unit": "node tests/phase15-notifications.test.mjs && node tests/phase16-review.test.mjs && node tests/phase16-authorization.test.mjs",
+    "db:migrations:check": "node tests/migrations.test.mjs",
+    "test:notifications": "node tests/phase15-notifications.test.mjs",
+    "check:worker": "npm run build && wrangler deploy --dry-run",
+    "db:migrate": "wrangler d1 migrations apply barbersaas-db --local",
+    "db:migrate:remote": "wrangler d1 migrations apply barbersaas-db --remote",
+    "db:migrations:list:remote": "wrangler d1 migrations list barbersaas-db --remote",
+    "db:bootstrap:super-admin": "node scripts/bootstrap-super-admin.mjs",
+    "db:seed": "node scripts/seed-local.mjs"
+  },
+  "dependencies": {
+    "@tanstack/react-query": "^5.90.2",
+    "axios": "^1.12.2",
+    "hono": "^4.10.1",
+    "lucide-react": "^0.468.0",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "react-hook-form": "^7.65.0",
+    "react-router-dom": "^7.9.4",
+    "zod": "^4.1.12"
+  },
+  "devDependencies": {
+    "@cloudflare/vite-plugin": "^1.13.0",
+    "@cloudflare/workers-types": "^5.20261007.1",
+    "@tailwindcss/vite": "^4.1.16",
+    "@types/node": "^24.7.2",
+    "@types/react": "^19.2.2",
+    "@types/react-dom": "^19.2.2",
+    "@vitejs/plugin-react": "^5.0.4",
+    "tailwindcss": "^4.1.16",
+    "typescript": "~5.9.3",
+    "vite": "^7.1.12",
+    "wrangler": "^4.42.0"
+  },
+  "overrides": {
+    "sharp": "^0.35.5"
+  }
+}

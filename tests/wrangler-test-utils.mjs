@@ -11,3 +11,8 @@ export function withIsolatedLocalPersistence(args, root, suite) {
   mkdirSync(directory, { recursive: true });
   return [...args.slice(0, localIndex + 1), "--persist-to", directory, ...args.slice(localIndex + 1)];
 }
+
+/** Apply the project migrations to the suite's isolated local D1 before inserting fixtures. */
+export function prepareLocalD1(runWrangler) {
+  runWrangler(["d1", "migrations", "apply", "barbersaas-db", "--local"]);
+}

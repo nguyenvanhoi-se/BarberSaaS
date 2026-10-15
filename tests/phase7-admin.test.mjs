@@ -5,7 +5,7 @@ import { existsSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { setTimeout as delay } from "node:timers/promises";
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { withIsolatedLocalPersistence } from "./wrangler-test-utils.mjs";
+import { prepareLocalD1, withIsolatedLocalPersistence } from "./wrangler-test-utils.mjs";
 
 const root=resolve(fileURLToPath(new URL("..",import.meta.url))),wrangler=resolve(root,"node_modules/wrangler/bin/wrangler.js"),host="127.0.0.1",port=8793,base=`http://${host}:${port}`;
 const ids={a:"phase7-shop-a",b:"phase7-shop-b",ownerA:"phase7-owner-a",ownerB:"phase7-owner-b",customerA:"phase7-customer-a",barberUser:"phase7-barber-user",barberA:"phase7-barber-a",barberB:"phase7-barber-b",serviceA:"phase7-service-a",serviceB:"phase7-service-b",bookingA:"phase7-booking-a",reviewA:"phase7-review-a",reviewB:"phase7-review-b"};
@@ -24,9 +24,10 @@ async function login(domain,email){const r=await request(domain,"/auth/login",{m
 async function ready(){for(let i=0;i<80;i++){try{if((await fetch(`${base}/api/health`)).ok)return;}catch{}await delay(250);}throw Error(`Worker failed to start: ${output}`);}
 const results=[];async function test(label,fn){try{await fn();results.push(`PASS ${label}`);}catch(error){results.push(`FAIL ${label}: ${error instanceof Error?error.stack??error.message:String(error)}`);}}
 async function main(){
-  writeFileSync(vars,"APP_ENV=development\nPLATFORM_DOMAIN=platform.test\nCORS_ALLOWED_ORIGINS=http://localhost:5173\n");fixture();
+  try{
+  writeFileSync(vars,"APP_ENV=development\nPLATFORM_DOMAIN=platform.test\nCORS_ALLOWED_ORIGINS=http://localhost:5173\n");prepareLocalD1(run);fixture();
   worker=spawn(process.execPath,[wrangler,...withIsolatedLocalPersistence(["dev","--config","wrangler.jsonc","--local","--ip",host,"--port",String(port),"--var","APP_ENV:development","--log-level","error"],root,"phase7")],{cwd:root,env,stdio:["ignore","pipe","pipe"]});worker.stdout.on("data",c=>output+=c);worker.stderr.on("data",c=>output+=c);
-  try{await ready();const ownerA=await login("admin-a.test","owner-a@phase7.test"),ownerB=await login("admin-b.test","owner-b@phase7.test"),customer=await login("admin-a.test","customer-a@phase7.test"),barber=await login("admin-a.test","barber@phase7.test");
+  await ready();const ownerA=await login("admin-a.test","owner-a@phase7.test"),ownerB=await login("admin-b.test","owner-b@phase7.test"),customer=await login("admin-a.test","customer-a@phase7.test"),barber=await login("admin-a.test","barber@phase7.test");
     await test("Owner dashboard reports scoped real D1 metrics",async()=>{const r=await request("admin-a.test","/shop/dashboard",{cookie:ownerA});assert.equal(r.status,200);const d=(await r.json()).data;assert.equal(d.total_customers,1);assert.equal(d.completed_bookings,1);assert.equal(d.total_revenue,150000);assert.equal(d.average_rating,0);});
     await test("Service CRUD is tenant scoped and audited",async()=>{const foreign=await request("admin-b.test",`/shop/services/${ids.serviceA}`,{method:"PUT",cookie:ownerB,body:{name:"Intrusion",price:1,duration_minutes:30,status:"ACTIVE"}});assert.equal(foreign.status,404);const create=await request("admin-a.test","/shop/services",{method:"POST",cookie:ownerA,body:{name:"Fade",price:90000,duration_minutes:30,status:"ACTIVE"}});assert.equal(create.status,201);const id=(await create.json()).data.id;assert.ok(id);const update=await request("admin-a.test",`/shop/services/${id}`,{method:"PUT",cookie:ownerA,body:{name:"Fade Plus",price:100000,duration_minutes:45,status:"ACTIVE"}});assert.equal(update.status,200);assert.equal((await request("admin-a.test",`/shop/services/${id}`,{method:"DELETE",cookie:ownerA})).status,200);});
     await test("Customer and barber roles are denied owner modules",async()=>{for(const cookie of [customer,barber]){assert.equal((await request("admin-a.test","/shop/dashboard",{cookie})).status,403);assert.equal((await request("admin-a.test","/shop/services",{cookie})).status,403);assert.equal((await request("admin-a.test","/shop/change-password",{method:"POST",cookie,body:{current_password:password,new_password:"Different-Password-123!"}})).status,403);}});

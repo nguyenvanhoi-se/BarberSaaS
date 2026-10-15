@@ -68,8 +68,9 @@ async function main() {
     assert.doesNotMatch(await notFound.text(), /stack|wrangler|exception|node_modules/iu);
 
     const config = JSON.parse(readFileSync(resolve(root, "wrangler.jsonc"), "utf8"));
-    assert.equal(config.ratelimits.length, 4);
-    assert.equal(new Set(config.ratelimits.map((limit) => limit.namespace_id)).size, 4);
+    const expectedRateLimitBindings = ["AUTH_RATE_LIMIT", "BOOKING_RATE_LIMIT", "DOMAIN_RATE_LIMIT", "EMAIL_RATE_LIMIT", "UPLOAD_RATE_LIMIT"];
+    assert.deepEqual(config.ratelimits.map((limit) => limit.name).sort(), expectedRateLimitBindings);
+    assert.equal(new Set(config.ratelimits.map((limit) => limit.namespace_id)).size, expectedRateLimitBindings.length);
 
     worker.kill("SIGTERM");
     await Promise.race([new Promise((resolveExit) => worker.once("exit", resolveExit)), delay(3000)]);

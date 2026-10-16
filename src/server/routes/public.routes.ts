@@ -62,7 +62,7 @@ publicRoutes.get("/barbers/:id", async (context) => {
 publicRoutes.get("/gallery/:id/image", async (context) => {
   const tenant=context.get("currentTenant");if(!tenant)throw new AppError(404,"SHOP_NOT_FOUND","Shop not found");
   const item=await context.env.DB.prepare("SELECT r2_key FROM gallery WHERE shop_id=? AND id=?").bind(tenant.id,context.req.param("id")).first<{r2_key:string|null}>();
-  if(!item?.r2_key)throw new AppError(404,"NOT_FOUND","Image not found");
+  if(!item?.r2_key||!context.env.MEDIA_BUCKET)throw new AppError(404,"NOT_FOUND","Image not found");
   const object=await new StorageService(context.env.MEDIA_BUCKET).get(item.r2_key);if(!object)throw new AppError(404,"NOT_FOUND","Image not found");
   const headers=new Headers();object.writeHttpMetadata(headers);headers.set("Cache-Control","public, max-age=3600");headers.set("Vary","Host");headers.set("X-Content-Type-Options","nosniff");headers.set("Cross-Origin-Resource-Policy","same-origin");headers.set("Content-Security-Policy","default-src 'none'; sandbox");
   return new Response(object.body,{headers});

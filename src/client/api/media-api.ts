@@ -2,6 +2,18 @@ export type UploadKind="logo"|"cover"|"hero"|"barber_avatar"|"service_image"|"ga
 export type UploadedImage={id:string;r2_key:string;url:string;file_size:number;mime_type:string;cleanup_pending?:boolean};
 type ApiEnvelope<T>={success:true;data:T};
 
+export type ImageStorageAvailability="configured"|"not_configured"|"unavailable";
+
+export async function getImageStorageAvailability():Promise<ImageStorageAvailability>{
+  try{
+    const response=await fetch("/api/health/ready",{credentials:"same-origin"});
+    if(!response.ok)return "unavailable";
+    const payload=await response.json() as {success?:boolean;data?:{checks?:{media_storage?:string}}};
+    if(payload.success!==true)return "unavailable";
+    return payload.data?.checks?.media_storage==="configured"?"configured":"not_configured";
+  }catch{return "unavailable";}
+}
+
 export async function uploadShopImage(input:{file:File;kind:UploadKind;resourceId?:string;title?:string;description?:string;category?:string}):Promise<UploadedImage>{
   const form=new FormData();form.set("kind",input.kind);form.set("file",input.file);
   if(input.resourceId)form.set("resource_id",input.resourceId);

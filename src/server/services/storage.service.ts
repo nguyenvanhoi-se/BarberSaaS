@@ -10,6 +10,11 @@ export type ImageContentType = keyof typeof IMAGE_TYPES;
 
 export type ImageKind = "logo" | "cover" | "hero" | "barber_avatar" | "service_image" | "gallery";
 
+export function requireMediaBucket(bucket?: R2Bucket): R2Bucket {
+  if (!bucket) throw new AppError(503, "STORAGE_NOT_CONFIGURED", "Image uploads are temporarily unavailable because storage is not configured.");
+  return bucket;
+}
+
 export function publicImageUrl(key: string): string {
   return `/api/media/${key.split("/").map(encodeURIComponent).join("/")}`;
 }
@@ -67,13 +72,13 @@ export function isManagedImageKey(key: string): boolean {
 }
 
 export class StorageService {
-  constructor(private readonly bucket: R2Bucket) {}
+  constructor(private readonly bucket?: R2Bucket) {}
 
   async upload(key: string, body: ReadableStream<Uint8Array>, contentType: ImageContentType, metadata: Record<string, string>): Promise<void> {
-    await this.bucket.put(key, body, { httpMetadata: { contentType }, customMetadata: metadata });
+    await requireMediaBucket(this.bucket).put(key, body, { httpMetadata: { contentType }, customMetadata: metadata });
   }
 
-  async delete(key: string): Promise<void> { await this.bucket.delete(key); }
-  async get(key: string): Promise<R2ObjectBody | null> { return this.bucket.get(key); }
-  async exists(key: string): Promise<boolean> { return (await this.bucket.head(key)) !== null; }
+  async delete(key: string): Promise<void> { await requireMediaBucket(this.bucket).delete(key); }
+  async get(key: string): Promise<R2ObjectBody | null> { return requireMediaBucket(this.bucket).get(key); }
+  async exists(key: string): Promise<boolean> { return (await requireMediaBucket(this.bucket).head(key)) !== null; }
 }

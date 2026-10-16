@@ -10,8 +10,10 @@ export const healthRoutes = new Hono<AppEnv>().get("/", (context) =>
 healthRoutes.get("/ready", async (context) => {
   try {
     await context.env.DB.prepare("SELECT 1 AS ready").first<{ ready: number }>();
-    if (!context.env.MEDIA_BUCKET) throw new Error("Storage binding is unavailable");
-    return successResponse(context, { status: "ready", checks: { database: "ok", media_storage: "bound" } });
+    return successResponse(context, {
+      status: "ready",
+      checks: { database: "ok", media_storage: context.env.MEDIA_BUCKET ? "configured" : "not_configured" },
+    });
   } catch {
     return errorResponse(context, 503, "Service is not ready", { code: "DEPENDENCY_UNAVAILABLE" });
   }

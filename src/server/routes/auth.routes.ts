@@ -10,7 +10,7 @@ import { AppError } from "../utils/app-error";
 import { successResponse } from "../utils/http-response";
 import { hashPassword, sha256Hex } from "../utils/crypto";
 import { MediaRepository } from "../repositories/media.repository";
-import { publicImageUrl, StorageService, userImageKey, validateImageFile } from "../services/storage.service";
+import { publicImageUrl, requireMediaBucket, StorageService, userImageKey, validateImageFile } from "../services/storage.service";
 import { rateLimit } from "../middleware/rate-limit";
 import { logServerError } from "../utils/server-log";
 import { NotificationService } from "../notifications/NotificationService";
@@ -76,9 +76,10 @@ authRoutes.get("/me", (context) => {
 authRoutes.use("/avatar",requireAuth);
 authRoutes.post("/avatar",rateLimit((env) => env.UPLOAD_RATE_LIMIT, "upload"),async(context)=>{
   const user=context.get("currentUser");if(!user)throw new AppError(401,"UNAUTHENTICATED","Authentication required");
+  const storage=new StorageService(requireMediaBucket(context.env.MEDIA_BUCKET));
   let form:FormData;try{form=await context.req.formData();}catch{throw new AppError(400,"INVALID_MULTIPART","A multipart image upload is required");}
   const file=form.get("file");if(!(file instanceof File))throw new AppError(422,"INVALID_IMAGE","Choose a JPEG, PNG, or WebP image");
-  const mime=await validateImageFile(file,5*1024*1024);const repository=new MediaRepository(context.env.DB);const storage=new StorageService(context.env.MEDIA_BUCKET);
+  const mime=await validateImageFile(file,5*1024*1024);const repository=new MediaRepository(context.env.DB);
   const oldKey=await repository.currentUserMedia(user.id);const key=userImageKey(user.id,mime);const url=publicImageUrl(key);
   try{await storage.upload(key,file.stream(),mime,{user_id:user.id,kind:"user_avatar"});}
   catch(error){try{await storage.delete(key);}catch(cleanupError){logServerError("r2.cleanup_failed",context.get("requestId"),cleanupError,{key});}logServerError("r2.user_avatar_upload_failed",context.get("requestId"),error);throw new AppError(502,"UPLOAD_FAILED","Image upload failed");}
@@ -89,7 +90,7 @@ authRoutes.post("/avatar",rateLimit((env) => env.UPLOAD_RATE_LIMIT, "upload"),as
 });
 authRoutes.delete("/avatar",async(context)=>{
   const user=context.get("currentUser");if(!user)throw new AppError(401,"UNAUTHENTICATED","Authentication required");
-  const repository=new MediaRepository(context.env.DB);const storage=new StorageService(context.env.MEDIA_BUCKET);const key=await repository.currentUserMedia(user.id);
+  const repository=new MediaRepository(context.env.DB);const storage=new StorageService(requireMediaBucket(context.env.MEDIA_BUCKET));const key=await repository.currentUserMedia(user.id);
   if(key){try{await storage.delete(key);}catch(error){logServerError("r2.user_avatar_delete_failed",context.get("requestId"),error,{key});throw new AppError(502,"IMAGE_DELETE_FAILED","Image could not be deleted");}}
   try{await repository.clearUserMedia(user.id);}catch(error){logServerError("r2.user_avatar_metadata_delete_failed",context.get("requestId"),error,{userId:user.id});throw new AppError(500,"MEDIA_METADATA_DELETE_FAILED","Image metadata could not be deleted; retry the operation");}
   return successResponse(context,{deleted:true});

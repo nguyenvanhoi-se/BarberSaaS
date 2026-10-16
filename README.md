@@ -22,9 +22,15 @@ The Hono API is mounted under `/api` and uses a shared response envelope. The fo
 
 ## Cloudflare resources
 
-`wrangler.jsonc` declares the `DB` D1 binding and `MEDIA_BUCKET` R2 binding. The D1 identifier is a local scaffold placeholder; replace it with the identifier returned by `npx wrangler d1 create barbersaas-db` before deployment. Create the R2 bucket with `npx wrangler r2 bucket create barbersaas-media` before deployment. Local Wrangler development uses its local R2 emulator; no R2 credentials are placed in the frontend or source tree.
+`wrangler.jsonc` keeps the default `DB` binding on Wrangler's local D1 emulator. `npm run dev` and integration tests do not write to remote staging. The explicit `staging` environment binds `DB` to `barbersaas-staging-db` (`d32ec225-aa1b-4bf9-83a4-c3f2b87c4064`); use that environment only when intentionally testing against staging. The base/production D1 ID remains a zero placeholder, so the production deploy script fails closed until a real production database is created and verified. No R2 bucket is currently bound: public pages and booking work without it, while image uploads are explicitly unavailable and return `STORAGE_NOT_CONFIGURED`. Existing image metadata is preserved; static files under `public/images` provide fallbacks.
 
-The D1 schema is maintained as ordered SQL migrations under `migrations/`. Apply them to the local Wrangler database with:
+The D1 schema is maintained as ordered SQL migrations under `migrations/`. Validate every migration against a clean in-memory SQLite database with:
+
+```sh
+npm run db:migrations
+```
+
+Apply them to the local Wrangler database with:
 
 ```sh
 npm run db:migrate
@@ -64,7 +70,7 @@ npm run preview
 
 ### Shop owner dashboard
 
-Sign in as a `SHOP_OWNER` on the shop's hostname and visit `/admin`. The workspace includes tenant-scoped dashboard statistics and charts, booking management, service and barber CRUD, weekly barber hours, customers, review moderation, R2 gallery uploads, business/branding settings, and profile/password management. Gallery images are served through a public route that verifies the gallery item belongs to the hostname-resolved tenant. The Phase 7 integration suite checks role access, tenant isolation, D1 mutations, audit records, and local R2 upload/read/delete.
+Sign in as a `SHOP_OWNER` on the shop's hostname and visit `/admin`. The workspace includes tenant-scoped dashboard statistics and charts, booking management, service and barber CRUD, weekly barber hours, customers, review moderation, gallery metadata, business/branding settings, and profile/password management. Uploads are disabled until an R2 bucket is provisioned and bound; the UI reports that state, and the Worker returns `503 STORAGE_NOT_CONFIGURED` instead of claiming an upload succeeded. Existing R2 keys/URLs in D1 are not modified. Public media URLs return not found while storage is unavailable, allowing image fallbacks to display.
 
 During `npm run dev`, test the Worker endpoint at `http://localhost:5173/api/health`. A successful response includes `{ "status": "ok", "version": "..." }` inside the shared response envelope. `/api/health` is liveness; `/api/health/ready` checks safe readiness signals without returning binding credentials.
 
@@ -74,11 +80,11 @@ Sign in to the platform host at `/super-admin/login` with a `SUPER_ADMIN` accoun
 
 `npm test` also runs `tests/phase8-super-admin.test.mjs` for global role access, tenant isolation, shop creation/onboarding, duplicate slug/domain rejection, shop suspension/reactivation, subscription and audit APIs, secret redaction, and Super Admin self-protection.
 
-### R2 image uploads
+### Image storage status
 
-`POST /api/shop/media` accepts multipart `kind` plus `file` (or multiple `files` for gallery); image keys are generated server-side from the resolved shop and resource. Only JPEG, PNG, and WebP signatures are accepted. The D1 migration stores each R2 key, URL, MIME type, and byte size alongside the owning shop/service/barber/gallery record; image bytes stay in R2. User avatars use `POST /api/auth/avatar` and `DELETE /api/auth/avatar`. Shop images are served from `/api/media/{managed-key}` with immutable cache headers. Replacing an image compensates by deleting the newly uploaded object if its D1 write fails and reports `cleanup_pending` if deletion of the previous object fails.
+R2 is not currently provisioned or bound in local/staging configuration. The TypeScript binding is optional, readiness reports `media_storage: "not_configured"`, and all upload/delete operations requiring R2 fail safely with `503 STORAGE_NOT_CONFIGURED`. Static fallbacks are `public/images/image-placeholder.svg` and `public/images/barbershop-hero.svg`; no shared image data is put in browser storage. When R2 is later enabled, bind `MEDIA_BUCKET` separately in each intended Wrangler environment and create the bucket in Cloudflare first. Image bytes remain in R2 and only keys/metadata remain in D1.
 
-The Phase 9 additions to `tests/phase7-admin.test.mjs` exercise the local Worker/R2 path, public image bytes and cache headers, allowed/forbidden formats, oversized files, tenant-scoped resource uploads, profile avatars, and cross-tenant deletion.
+The Phase 7 integration suite verifies that missing R2 does not break the Worker, uploads return `STORAGE_NOT_CONFIGURED`, and pre-existing image metadata remains unchanged. Booking draft state is held only in `sessionStorage`; confirmed bookings and all business data remain in D1.
 
 ## Production deployment
 

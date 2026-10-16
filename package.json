@@ -17,6 +17,7 @@
     "test:unit": "node tests/phase15-notifications.test.mjs && node tests/phase16-review.test.mjs && node tests/phase16-authorization.test.mjs",
     "db:migrations:check": "node tests/migrations.test.mjs",
     "test:notifications": "node tests/phase15-notifications.test.mjs",
+    "db:migrations": "node tests/migrations.test.mjs",
     "check:worker": "npm run build && wrangler deploy --dry-run",
     "db:migrate": "wrangler d1 migrations apply barbersaas-db --local",
     "db:migrate:remote": "wrangler d1 migrations apply barbersaas-db --remote",

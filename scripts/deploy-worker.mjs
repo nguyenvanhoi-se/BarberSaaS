@@ -6,10 +6,16 @@ import { fileURLToPath } from "node:url";
 const root = resolve(fileURLToPath(new URL("..", import.meta.url)));
 const packageJson = JSON.parse(readFileSync(resolve(root, "package.json"), "utf8"));
 const wrangler = resolve(root, "node_modules/wrangler/bin/wrangler.js");
+const wranglerConfig = JSON.parse(readFileSync(resolve(root, "wrangler.jsonc"), "utf8"));
 
 function fail(message) {
   console.error(message);
   process.exit(1);
+}
+
+const productionDatabase = wranglerConfig.d1_databases?.find((database) => database.binding === "DB");
+if (!productionDatabase?.database_id || productionDatabase.database_id === "00000000-0000-0000-0000-000000000000") {
+  fail("Production deployment is blocked until a real production D1 database is created and configured for the DB binding.");
 }
 
 const platformDomain = process.env.PLATFORM_DOMAIN?.trim().toLowerCase();

@@ -49,7 +49,9 @@ async function main() {
 
     const readiness = await fetch(`${base}/api/health/ready`);
     assert.equal(readiness.status, 200, await readiness.clone().text());
-    assert.equal((await readiness.json()).data.checks.database, "ok");
+    const readinessData = (await readiness.json()).data;
+    assert.equal(readinessData.checks.database, "ok");
+    assert.equal(readinessData.checks.media_storage, "not_configured");
 
     const privateResponse = await fetch(`${base}/api/auth/me`);
     assert.equal(privateResponse.status, 401);

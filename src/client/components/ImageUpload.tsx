@@ -1,7 +1,7 @@
 import { useEffect,useState } from "react";
 import { Image as ImageIcon,LoaderCircle,Trash2,Upload } from "lucide-react";
-import { useQueryClient } from "@tanstack/react-query";
-import { deleteShopImage,deleteUserAvatar,uploadShopImage,uploadUserAvatar,type UploadKind } from "../api/media-api";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { deleteShopImage,deleteUserAvatar,getImageStorageAvailability,uploadShopImage,uploadUserAvatar,type UploadKind } from "../api/media-api";
 import { Image } from "./Image";
 
 type Kind=UploadKind|"user_avatar";
@@ -10,6 +10,8 @@ const ACCEPT="image/jpeg,image/png,image/webp";
 
 export function ImageUpload({kind,resourceId,currentUrl,label,onChange,title,description,category,disabled=false}:Props){
   const [localPreview,setLocalPreview]=useState("");const [busy,setBusy]=useState(false);const [error,setError]=useState("");const [message,setMessage]=useState("");const queryClient=useQueryClient();
+  const storage=useQuery({queryKey:["image-storage-availability"],queryFn:getImageStorageAvailability,staleTime:5*60*1000,retry:false});
+  const canUpload=storage.data==="configured";
   useEffect(()=>()=>{if(localPreview)URL.revokeObjectURL(localPreview);},[localPreview]);
   async function upload(file:File){
     setError("");setMessage("");
@@ -35,8 +37,10 @@ export function ImageUpload({kind,resourceId,currentUrl,label,onChange,title,des
   return <div className="image-upload">
     <div className="image-upload-preview">{source?<Image src={source} alt={`${label} preview`}/>:<span><ImageIcon size={22}/><small>No image</small></span>}</div>
     <div className="image-upload-controls"><b>{label}</b><small>JPEG, PNG, or WebP · {kind==="gallery"?10:5} MB max</small>
-      <label className={`admin-button secondary image-upload-pick${disabled||busy?" disabled":""}`}><Upload size={15}/>{busy?"Uploading…":"Choose image"}<input type="file" accept={ACCEPT} disabled={disabled||busy} onChange={e=>{const file=e.target.files?.[0];if(file)void upload(file);e.currentTarget.value="";}}/></label>
-      {currentUrl&&<button type="button" className="admin-button danger image-upload-remove" disabled={disabled||busy} onClick={()=>void remove()}><Trash2 size={14}/>Remove</button>}
+      <label className={`admin-button secondary image-upload-pick${disabled||busy||!canUpload?" disabled":""}`}><Upload size={15}/>{busy?"Uploading…":canUpload?"Choose image":"Uploads unavailable"}<input type="file" accept={ACCEPT} disabled={disabled||busy||!canUpload} onChange={e=>{const file=e.target.files?.[0];if(file)void upload(file);e.currentTarget.value="";}}/></label>
+      {currentUrl&&<button type="button" className="admin-button danger image-upload-remove" disabled={disabled||busy||!canUpload} onClick={()=>void remove()}><Trash2 size={14}/>Remove</button>}
+      {storage.isPending&&<small role="status">Checking image storage availability…</small>}
+      {!storage.isPending&&!canUpload&&<small role="status">{storage.data==="not_configured"?"Image uploads are temporarily unavailable because Cloudflare R2 is not configured.":"Image storage is currently unavailable. Uploads are disabled."}</small>}
       {busy&&<span className="image-upload-progress" role="status"><LoaderCircle size={14} className="spin"/>Uploading image…</span>}
       {error&&<small className="image-upload-error" role="alert">{error}</small>}{message&&!error&&<small className="image-upload-message" role="status">{message}</small>}
     </div>

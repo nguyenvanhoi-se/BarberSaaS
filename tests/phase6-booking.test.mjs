@@ -157,6 +157,12 @@ async function main() {
     worker.stderr.on("data", (chunk) => { workerOutput += chunk.toString(); });
     await waitForWorker().catch((error) => { throw new Error(`${error.message}\n${workerOutput}`); });
 
+    const readiness = await fetch(`${base}/api/health/ready`);
+    assert.equal(readiness.status, 200, await readiness.clone().text());
+    const readinessData = (await readiness.json()).data;
+    assert.equal(readinessData.checks.database, "ok");
+    assert.equal(readinessData.checks.media_storage, "not_configured");
+
     const customerA = await signIn("booking-a.test", "booking-customer-a@phase6.test");
     const customerA2 = await signIn("booking-a.test", "booking-customer-a2@phase6.test");
     const ownerA = await signIn("booking-a.test", "booking-owner-a@phase6.test");
@@ -195,6 +201,10 @@ async function main() {
       assert.match(created.booking_code, /^BK-[A-F0-9]{16}$/u);
       const createAudit = queryLocalD1(`SELECT COUNT(*) AS total FROM audit_logs WHERE shop_id='${ids.shopA}' AND entity_id='${created.id}' AND action='CREATE_BOOKING'`);
       assert.equal(createAudit[0].results[0].total, 1);
+      const persistedBooking = queryLocalD1(`SELECT id, shop_id, total_price, end_time FROM bookings WHERE id='${created.id}'`);
+      assert.equal(persistedBooking[0].results[0].shop_id, ids.shopA, "booking is persisted in tenant-scoped D1 without R2");
+      assert.equal(persistedBooking[0].results[0].total_price, 150000);
+      assert.equal(persistedBooking[0].results[0].end_time, "09:30");
       const detail = await request("booking-a.test", `/customer/bookings/${created.id}`, { cookie: customerA });
       assert.equal(detail.status, 200);
       const logs = await request("booking-a.test", "/shop/bookings", { cookie: ownerA });

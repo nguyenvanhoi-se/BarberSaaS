@@ -1,6 +1,6 @@
 export type Bindings = {
   DB: D1Database;
-  MEDIA_BUCKET: R2Bucket;
+  MEDIA_BUCKET?: R2Bucket;
   ASSETS?: Fetcher;
   APP_ENV?: "development" | "production" | "test";
   APP_VERSION?: string;

@@ -12,6 +12,7 @@ mediaRoutes.get("/*", async (context) => {
   }
   catch { return context.body(null, 404); }
   if (!isManagedImageKey(key)) return context.body(null, 404);
+  if (!context.env.MEDIA_BUCKET) return context.body(null, 404);
 
   const object = await new StorageService(context.env.MEDIA_BUCKET).get(key);
   if (!object) return context.body(null, 404);

@@ -20,7 +20,7 @@ export function HomePage() {
 
   return <>
     <section className="hero-section">
-      <Image src={shop.settings.hero_image || shop.cover_url} alt="" loading="eager" className="hero-image"/>
+      <Image src={shop.settings.hero_image || shop.cover_url} alt="" loading="eager" fallbackSrc="/images/barbershop-hero.svg" className="hero-image"/>
       <div className="hero-overlay"/>
       <div className="site-container relative z-10 grid min-h-[620px] items-center py-24 lg:min-h-[720px]">
         <div className="max-w-3xl"><p className="mb-5 text-xs font-bold uppercase tracking-[.28em] text-[var(--accent-color)]">{shop.address || "A cut above the rest"}</p>
@@ -35,7 +35,7 @@ export function HomePage() {
 
     <section id="welcome" className="site-container grid gap-10 py-20 lg:grid-cols-[.8fr_1.2fr] lg:items-center lg:py-28">
       <div><SectionTitle eyebrow="Welcome in" title="Good grooming. Great company."/><p className="max-w-xl leading-7 text-neutral-400">{shop.description || shop.settings.hero_description || "A neighborhood barbershop built around good conversation, attention to detail, and the confidence that comes with a great cut."}</p><div className="mt-7 flex flex-wrap gap-4"><Link to="/about" className="text-sm font-semibold text-[var(--accent-color)]">More about us <ArrowRight className="ml-2 inline" size={15}/></Link>{shop.address && <span className="flex items-center gap-2 text-sm text-neutral-500"><MapPin size={15}/>{shop.address}</span>}</div></div>
-      <div className="relative overflow-hidden rounded-3xl border border-white/10"><Image src={shop.cover_url} alt={`${shop.name} shop`} className="aspect-[16/10] w-full object-cover"/><div className="absolute inset-0 bg-gradient-to-t from-black/45 to-transparent"/></div>
+      <div className="relative overflow-hidden rounded-3xl border border-white/10"><Image src={shop.cover_url} alt={`${shop.name} shop`} fallbackSrc="/images/barbershop-hero.svg" className="aspect-[16/10] w-full object-cover"/><div className="absolute inset-0 bg-gradient-to-t from-black/45 to-transparent"/></div>
     </section>
 
     <section className="section-band"><div className="site-container py-20 lg:py-24"><SectionTitle eyebrow="The menu" title="Services made for you" description="From a quick tidy-up to a full refresh, take a look at what we offer."/><FeaturedServices query={services}/><div className="mt-8"><Link to="/services" className="text-sm font-semibold text-[var(--accent-color)]">All services <ArrowRight className="ml-2 inline" size={15}/></Link></div></div></section>

@@ -2,7 +2,7 @@ import { Hono } from "hono";
 import { z } from "zod";
 import type { AppEnv } from "../types/app";
 import { MediaRepository, type MediaTarget } from "../repositories/media.repository";
-import { imageKey, publicImageUrl, StorageService, validateImageFile, type ImageKind } from "../services/storage.service";
+import { imageKey, publicImageUrl, requireMediaBucket, StorageService, validateImageFile, type ImageKind } from "../services/storage.service";
 import type { AuthUser } from "../../shared/auth";
 import { requireRole } from "../middleware/auth";
 import { AppError } from "../utils/app-error";
@@ -64,6 +64,7 @@ async function uploadOne(input:{context:import("hono").Context<AppEnv>;shopId:st
 shopMediaRoutes.post("/",rateLimit((env) => env.UPLOAD_RATE_LIMIT,"upload"),async(context)=>{
   const tenant=context.get("currentTenant");const user=context.get("currentUser");
   if(!tenant||!user)throw new AppError(401,"UNAUTHENTICATED","Authentication required");
+  const storage=new StorageService(requireMediaBucket(context.env.MEDIA_BUCKET));
   let form:FormData;try{form=await context.req.formData();}catch{throw new AppError(400,"INVALID_MULTIPART","A multipart image upload is required");}
   const parsed=targetSchema.safeParse({kind:form.get("kind"),resource_id:form.get("resource_id")||null});
   if(!parsed.success)throw new AppError(422,"VALIDATION_ERROR","Image type or resource is invalid");
@@ -74,7 +75,7 @@ shopMediaRoutes.post("/",rateLimit((env) => env.UPLOAD_RATE_LIMIT,"upload"),asyn
   if(!files.length||files.length!==rawFiles.length)throw new AppError(422,"INVALID_IMAGE","Choose one or more supported image files");
   if(files.length>1&&kind!=="gallery")throw new AppError(422,"MULTIPLE_FILES_NOT_SUPPORTED","Multiple files are only supported for gallery uploads");
 
-  const repository=new MediaRepository(context.env.DB);const storage=new StorageService(context.env.MEDIA_BUCKET);const results:Array<Record<string,unknown>>=[];
+  const repository=new MediaRepository(context.env.DB);const results:Array<Record<string,unknown>>=[];
   for(const file of files){
     try{results.push({success:true,...await uploadOne({context,shopId:tenant.id,user,repository,storage,kind,resourceId:parsed.data.resource_id??null,file,title:title||file.name.replace(/\.[^.]+$/u,""),description,category})});}
     catch(error){results.push({success:false,filename:file.name,message:error instanceof AppError?error.message:"Image upload failed",status:error instanceof AppError?error.status:500,code:error instanceof AppError?error.code:"UPLOAD_FAILED"});}
@@ -85,8 +86,9 @@ shopMediaRoutes.post("/",rateLimit((env) => env.UPLOAD_RATE_LIMIT,"upload"),asyn
 
 shopMediaRoutes.delete("/",rateLimit((env) => env.UPLOAD_RATE_LIMIT,"upload"),async(context)=>{
   const tenant=context.get("currentTenant");const user=context.get("currentUser");if(!tenant||!user)throw new AppError(401,"UNAUTHENTICATED","Authentication required");
+  const storage=new StorageService(requireMediaBucket(context.env.MEDIA_BUCKET));
   const parsed=targetSchema.safeParse(await context.req.json().catch(()=>null));if(!parsed.success)throw new AppError(422,"VALIDATION_ERROR","Image type or resource is invalid");
-  const target=validateTarget(parsed.data.kind,parsed.data.resource_id??null);const repository=new MediaRepository(context.env.DB);const storage=new StorageService(context.env.MEDIA_BUCKET);
+  const target=validateTarget(parsed.data.kind,parsed.data.resource_id??null);const repository=new MediaRepository(context.env.DB);
   const existing=await repository.currentShopMedia(tenant.id,target);
   if(!existing){if(target.kind==="hero")return successResponse(context,{deleted:true});throw new AppError(404,"NOT_FOUND","Image owner or image not found");}
   const key=existing.r2_key;

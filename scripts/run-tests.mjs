@@ -13,6 +13,7 @@ const suites = [
   { name: "phase12-production", file: "tests/phase12-production.test.mjs", integration: true },
   { name: "phase14-billing", file: "tests/phase14-billing.test.mjs", integration: true },
   { name: "phase15-notifications", file: "tests/phase15-notifications.test.mjs" },
+  { name: "free-first-config", file: "tests/free-first-config.test.mjs" },
   { name: "phase16-review", file: "tests/phase16-review.test.mjs" },
   { name: "phase16-authorization", file: "tests/phase16-authorization.test.mjs" },
 ];
